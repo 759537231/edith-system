@@ -1269,6 +1269,55 @@ python3 $API mile "里程碑名" done  # 更新里程碑
 - **v2.0** — 双模式分流，部门制架构
 - **v1.0** — 初始版本
 
+## 任务控制与卡死检测（2026-05-09）
+
+**问题**：delegate_task可能卡死（超时、死循环），用户无法中途暂停。
+
+**解决方案**：可视化面板新增任务控制API，支持暂停/终止/卡死检测。
+
+**API工具**：`~/.hermes/edith-dashboard/edith_api.py`
+
+```bash
+API=~/.hermes/edith-dashboard/edith_api.py
+
+# 创建任务
+python3 $API task_create 工部 "实现80年代主页"
+# 返回 task_id: task_1234567890
+
+# 开始任务
+python3 $API task_start task_1234567890
+
+# 完成任务
+python3 $API task_complete task_1234567890 done
+
+# 暂停任务（用户点击暂停按钮）
+python3 $API task_pause task_1234567890
+
+# 终止任务（用户点击终止按钮）
+python3 $API task_kill task_1234567890
+
+# 更新输出时间（防止卡死检测误报）
+python3 $API task_output task_1234567890
+```
+
+**卡死检测机制**：
+- 后台线程每30秒检查一次
+- 120秒无输出 → 触发"卡死"警告
+- 面板显示警告，用户可选择暂停或终止
+
+**伊迪丝集成流程**：
+```
+1. 创建任务 → task_create
+2. 开始任务 → task_start
+3. delegate_task执行中...
+4. 每收到输出 → task_output（更新时间）
+5. 完成 → task_complete
+6. 用户点暂停 → task_pause → 伊迪丝收到通知
+7. 用户点终止 → task_kill → 伊迪丝收到通知
+```
+
+**铁律**：delegate_task必须配合task_create使用，否则无法卡死检测。
+
 ## 参考文件
 
 - `references/document-generation-pitfalls.md` — PDF/报告生成的常见坑（fpdf2中文字体、编码、布局）
