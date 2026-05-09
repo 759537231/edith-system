@@ -27,6 +27,8 @@ DEPT_MAP = {
     'xingbu': 'xingbu',
     '门下省': 'menxiasheng',
     'menxiasheng': 'menxiasheng',
+    '视频创作部': 'shipinchuangzuobu',
+    'shipinchuangzuobu': 'shipinchuangzuobu',
 }
 
 def extract_summary(content: str, max_lines: int = 50) -> str:
