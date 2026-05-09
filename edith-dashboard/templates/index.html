@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🏛️ 伊迪丝可视化面板</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
+.header{text-align:center;padding:24px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.header h1{font-size:1.8em;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.phase-badge{display:inline-block;padding:6px 18px;border-radius:20px;margin-top:10px;font-size:.9em;font-weight:600}
+.phase-badge.idle{background:rgba(255,255,255,.08);color:#888}
+.phase-badge.active{background:linear-gradient(90deg,#00d4ff22,#00ff8822);color:#00d4ff;border:1px solid #00d4ff44}
+.grid{display:grid;grid-template-columns:280px 1fr 360px;gap:16px;padding:16px;max-width:1400px;margin:0 auto;min-height:calc(100vh - 120px)}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;overflow-y:auto}
+.card h2{font-size:1em;color:#00d4ff;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+/* 左栏：部门 */
+.dept{padding:10px;margin-bottom:8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);transition:.3s}
+.dept.working{border-color:#00d4ff;background:#00d4ff0d}
+.dept.done{border-color:#00ff88;background:#00ff880d}
+.dept-name{font-weight:600;font-size:.85em}
+.dept-task{font-size:.75em;color:#666;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dept-status{font-size:.7em;float:right;padding:2px 8px;border-radius:10px}
+.dept-status.idle{background:rgba(255,255,255,.06);color:#666}
+.dept-status.working{background:#00d4ff22;color:#00d4ff}
+.dept-status.done{background:#00ff8822;color:#00ff88}
+/* 中栏：阶段+里程碑 */
+.phases{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.phase-step{text-align:center;flex:1;min-width:60px}
+.phase-circle{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:.8em;transition:.3s}
+.phase-step.active .phase-circle{background:#00d4ff33;border:2px solid #00d4ff;box-shadow:0 0 12px #00d4ff44}
+.phase-step.done .phase-circle{background:#00ff8833;border:2px solid #00ff88}
+.phase-lbl{font-size:.7em;color:#555}
+.phase-step.active .phase-lbl{color:#00d4ff;font-weight:600}
+.phase-step.done .phase-lbl{color:#00ff88}
+.milestones{margin-top:16px}
+.mile{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85em}
+.mile-icon{width:20px;text-align:center}
+.mile.pending{color:#555}.mile.active{color:#00d4ff}.mile.done{color:#00ff88}
+/* 右栏：商讨 */
+.disc-round{margin-bottom:16px}
+.disc-round h3{font-size:.85em;color:#f093fb;margin-bottom:8px}
+.disc-bubble{background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:6px;font-size:.8em;border-left:3px solid transparent}
+.disc-bubble.mimo{border-color:#4facfe}
+.disc-bubble.longcat{border-color:#f5576c}
+.disc-bubble .speaker{font-size:.7em;color:#888;margin-bottom:4px}
+/* 演练按钮 */
+.demo-bar{text-align:center;padding:12px;border-top:1px solid rgba(255,255,255,.06)}
+.demo-bar button{padding:8px 20px;border:1px solid #00d4ff44;background:#00d4ff11;color:#00d4ff;border-radius:8px;cursor:pointer;font-size:.85em;margin:0 4px;transition:.2s}
+.demo-bar button:hover{background:#00d4ff22}
+/* 响应式 */
+@media(max-width:900px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🏛️ 伊迪丝可视化面板</h1>
+  <div id="badge" class="phase-badge idle">待命</div>
+</div>
+<div class="grid">
+  <!-- 左：部门 -->
+  <div class="card" id="dept-panel"><h2>🏢 部门状态</h2><div id="dept-list"></div></div>
+  <!-- 中：阶段+里程碑 -->
+  <div class="card">
+    <h2>📊 流程阶段</h2>
+    <div class="phases" id="phases"></div>
+    <h2 style="margin-top:16px">🎯 里程碑</h2>
+    <div class="milestones" id="mile-list"><div class="mile pending"><span class="mile-icon">⏳</span>等待任务开始</div></div>
+  </div>
+  <!-- 右：商讨 -->
+  <div class="card"><h2>💬 三轮商讨</h2><div id="disc-list"></div></div>
+</div>
+<div class="demo-bar">
+  <button onclick="demo('start')">▶ 模拟开始</button>
+  <button onclick="demo('full')">▶ 模拟完整流程</button>
+  <button onclick="reset()">🔄 重置</button>
+</div>
+
+<script>
+const PHASES=[{id:"understand",lbl:"① 理解"},{id:"round1",lbl:"② 第一轮"},{id:"round2",lbl:"③ 第二轮"},{id:"round3",lbl:"④ 第三轮"},{id:"confirm",lbl:"⑤ 确认"},{id:"execute",lbl:"⑥ 执行"},{id:"deliver",lbl:"⑦ 交付"}];
+const DEPTS=["枢密院","市场运营部","工部","通商部","户部","美术设计","交互设计","刑部","门下省"];
+const PHASE_NAMES={idle:"待命",understand:"理解需求中…",round1:"第一轮商讨中…",round2:"第二轮商讨中…",round3:"第三轮商讨中…",confirm:"等待确认…",execute:"执行中…",deliver:"交付中…"};
+
+// 初始化
+function init(){
+  document.getElementById("phases").innerHTML=PHASES.map(p=>`<div class="phase-step" id="p-${p.id}"><div class="phase-circle">${p.lbl.charAt(0)}</div><div class="phase-lbl">${p.lbl.slice(2)}</div></div>`).join("");
+  document.getElementById("dept-list").innerHTML=DEPTS.map(d=>`<div class="dept" id="d-${d}"><span class="dept-status idle" id="ds-${d}">待命</span><div class="dept-name">${d}</div><div class="dept-task" id="dt-${d}"></div></div>`).join("");
+  fetch("/api/state").then(r=>r.json()).then(applyState);
+}
+
+function applyState(s){
+  setPhase(s.phase);
+  Object.entries(s.departments).forEach(([d,info])=>setDept(d,info.status,info.task));
+  if(s.milestones)s.milestones.forEach(m=>setMile(m.name,m.status));
+  s.discussions.forEach(d=>addDisc(d));
+}
+
+// SSE
+const es=new EventSource("/stream");
+es.onmessage=e=>{
+  const d=JSON.parse(e.data);
+  if(d.t==="phase")setPhase(d.v);
+  else if(d.t==="dept")setDept(d.name,d.status,d.task);
+  else if(d.t==="disc")addDisc(d);
+  else if(d.t==="mile")setMile(d.name,d.status);
+  else if(d.t==="reset")location.reload();
+};
+
+function setPhase(p){
+  const idx=PHASES.findIndex(x=>x.id===p);
+  PHASES.forEach((ph,i)=>{
+    const el=document.getElementById("p-"+ph.id);
+    el.className="phase-step"+(i<idx?" done":i===idx?" active":"");
+  });
+  const badge=document.getElementById("badge");
+  badge.textContent=PHASE_NAMES[p]||p;
+  badge.className="phase-badge "+(p==="idle"?"idle":"active");
+}
+
+function setDept(name,status,task){
+  const card=document.getElementById("d-"+name);
+  if(!card)return;
+  card.className="dept"+(status==="working"?" working":status==="done"?" done":"");
+  const st=document.getElementById("ds-"+name);
+  st.textContent=status==="idle"?"待命":status==="working"?"工作中":"已完成";
+  st.className="dept-status "+status;
+  if(task!==undefined)document.getElementById("dt-"+name).textContent=task;
+}
+
+function setMile(name,status){
+  const list=document.getElementById("mile-list");
+  let el=list.querySelector(`[data-mile="${name}"]`);
+  if(!el){el=document.createElement("div");el.dataset.mile=name;list.appendChild(el);}
+  const icon=status==="done"?"✅":status==="active"?"🔄":"⏳";
+  el.className="mile "+status;
+  el.innerHTML=`<span class="mile-icon">${icon}</span>${name}`;
+}
+
+function addDisc(d){
+  const list=document.getElementById("disc-list");
+  const cls=d.speaker.includes("小米")||d.speaker.includes("MiMo")?"mimo":"longcat";
+  const div=document.createElement("div");
+  div.innerHTML=`<div class="disc-bubble ${cls}"><div class="speaker">第${d.round}轮 · ${d.speaker} · ${d.ts||""}</div>${d.content}</div>`;
+  list.appendChild(div);
+  list.scrollTop=list.scrollHeight;
+}
+
+async function api(path,data){return fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});}
+
+async function reset(){await api("/api/reset",{});location.reload();}
+
+// 演练
+async function demo(mode){
+  const depts=["枢密院","通商部","工部"];
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+  await api("/api/phase",{phase:"understand"});
+  await api("/api/milestone",{name:"理解需求",status:"active"});
+  await api("/api/department",{department:"枢密院",status:"working",task:"分析真实意图"});
+  await sleep(800);
+  await api("/api/discussion",{round:1,speaker:"小米",content:"用户需要实时监控伊迪丝系统的商讨过程和部门状态。核心需求：可视化流程进度。"});
+  await sleep(600);
+  await api("/api/discussion",{round:1,speaker:"LongCat",content:"风险点：SSE连接可能断开，需要重连机制。建议增加心跳检测。"});
+  await api("/api/department",{department:"枢密院",status:"done"});
+  await api("/api/milestone",{name:"理解需求",status:"done"});
+
+  if(mode!=="start"){
+    await api("/api/phase",{phase:"round1"});
+    await api("/api/milestone",{name:"第一轮商讨",status:"active"});
+    await sleep(500);
+    await api("/api/discussion",{round:2,speaker:"小米",content:"技术方案：Flask + SSE。前端纯HTML/CSS/JS，零依赖。端口8080自动探测。"});
+    await sleep(500);
+    await api("/api/discussion",{round:2,speaker:"LongCat",content:"补充方案：增加WebSocket备选，SSE失败时自动降级。前端增加断线重连。"});
+    await api("/api/milestone",{name:"第一轮商讨",status:"done"});
+
+    await api("/api/phase",{phase:"round2"});
+    await api("/api/milestone",{name:"第二轮商讨",status:"active"});
+    await sleep(500);
+    await api("/api/discussion",{round:3,speaker:"小米",content:"最终方案：采用SSE方案，增加自动重连。部门状态实时推送，商讨内容流式展示。"});
+    await api("/api/milestone",{name:"第二轮商讨",status:"done"});
+
+    await api("/api/phase",{phase:"confirm"});
+    await api("/api/milestone",{name:"用户确认",status:"active"});
+    await sleep(1000);
+    await api("/api/milestone",{name:"用户确认",status:"done"});
+
+    await api("/api/phase",{phase:"execute"});
+    await api("/api/milestone",{name:"执行任务",status:"active"});
+    for(const d of depts){
+      await api("/api/department",{department:d,status:"working",task:`${d}执行中…`});
+      await sleep(600);
+      await api("/api/department",{department:d,status:"done"});
+    }
+    await api("/api/milestone",{name:"执行任务",status:"done"});
+
+    await api("/api/phase",{phase:"deliver"});
+    await api("/api/milestone",{name:"交付完成",status:"done"});
+    await api("/api/discussion",{round:3,speaker:"伊迪丝",content:"✅ 任务完成。面板功能：实时阶段展示、部门状态、三轮商讨流式输出、里程碑追踪。"});
+  }
+}
+init();
+</script>
+</body>
+</html>
