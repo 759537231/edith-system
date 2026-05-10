@@ -5,72 +5,544 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>🏛️ 伊迪丝可视化面板</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
-.header{text-align:center;padding:24px 0;border-bottom:1px solid rgba(255,255,255,.08)}
-.header h1{font-size:1.8em;background:linear-gradient(90deg,#00d4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.phase-badge{display:inline-block;padding:6px 18px;border-radius:20px;margin-top:10px;font-size:.9em;font-weight:600}
-.phase-badge.idle{background:rgba(255,255,255,.08);color:#888}
-.phase-badge.active{background:linear-gradient(90deg,#00d4ff22,#00ff8822);color:#00d4ff;border:1px solid #00d4ff44}
-.grid{display:grid;grid-template-columns:280px 1fr 360px;gap:16px;padding:16px;max-width:1400px;margin:0 auto;min-height:calc(100vh - 120px)}
-.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;overflow-y:auto}
-.card h2{font-size:1em;color:#00d4ff;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+
+:root{
+  --paper:#F5F2EB;
+  --paper-dark:#EDE8DD;
+  --ink:#2C2C2C;
+  --ink-light:#5A5A5A;
+  --green:#68B3B0;
+  --green-dark:#4A8A87;
+  --willow:#789262;
+  --bamboo:#548B54;
+  --sky:#68B3C0;
+  --red:#C3272B;
+  --rouge:#9D2933;
+  --white:#F8F6F0;
+  --gold:#D4AF37;
+}
+
+body{
+  font-family:'Noto Serif SC','Songti SC','SimSun',serif;
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+
+/* 宣纸纹理背景 */
+body::before{
+  content:'';
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(139,119,101,0.03) 2px,
+      rgba(139,119,101,0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(139,119,101,0.02) 2px,
+      rgba(139,119,101,0.02) 4px
+    );
+  pointer-events:none;
+  z-index:0;
+}
+
+/* 水墨装饰 */
+body::after{
+  content:'';
+  position:fixed;
+  top:-50px;
+  right:-50px;
+  width:300px;
+  height:300px;
+  background:radial-gradient(circle,rgba(104,179,176,0.1) 0%,transparent 70%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:0;
+}
+
+.header{
+  text-align:center;
+  padding:32px 0 24px;
+  position:relative;
+  z-index:1;
+  border-bottom:1px solid rgba(44,44,44,0.1);
+  background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,transparent 100%);
+}
+
+.header h1{
+  font-size:1.8em;
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:0.1em;
+  text-shadow:1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.header h1 span{
+  color:var(--green);
+  font-weight:600;
+}
+
+.phase-badge{
+  display:inline-block;
+  padding:8px 24px;
+  border-radius:24px;
+  margin-top:12px;
+  font-size:.9em;
+  font-weight:600;
+  letter-spacing:0.05em;
+  transition:all 0.3s ease;
+}
+
+.phase-badge.idle{
+  background:rgba(44,44,44,0.06);
+  color:var(--ink-light);
+  border:1px solid rgba(44,44,44,0.1);
+}
+
+.phase-badge.active{
+  background:linear-gradient(135deg,rgba(104,179,176,0.15),rgba(120,146,98,0.15));
+  color:var(--green-dark);
+  border:1px solid var(--green);
+  box-shadow:0 2px 8px rgba(104,179,176,0.2);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:280px 1fr 360px;
+  gap:20px;
+  padding:20px;
+  max-width:1400px;
+  margin:0 auto;
+  min-height:calc(100vh - 140px);
+  position:relative;
+  z-index:1;
+}
+
+.card{
+  background:rgba(255,255,255,0.6);
+  border:1px solid rgba(44,44,44,0.08);
+  border-radius:12px;
+  padding:20px;
+  overflow-y:auto;
+  backdrop-filter:blur(10px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.04);
+  transition:all 0.3s ease;
+}
+
+.card:hover{
+  box-shadow:0 8px 24px rgba(0,0,0,0.08);
+  transform:translateY(-2px);
+}
+
+.card h2{
+  font-size:1.2em;
+  color:var(--ink);
+  margin-bottom:16px;
+  padding-bottom:12px;
+  border-bottom:2px solid var(--green);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+  letter-spacing:0.05em;
+}
+
+.card h2::before{
+  content:'';
+  display:inline-block;
+  width:4px;
+  height:16px;
+  background:var(--green);
+  border-radius:2px;
+}
+
 /* 左栏：部门 */
-.dept{padding:10px;margin-bottom:8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);transition:.3s}
-.dept.working{border-color:#00d4ff;background:#00d4ff0d}
-.dept.done{border-color:#00ff88;background:#00ff880d}
-.dept-name{font-weight:600;font-size:.85em}
-.dept-task{font-size:.75em;color:#666;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dept-status{font-size:.7em;float:right;padding:2px 8px;border-radius:10px}
-.dept-status.idle{background:rgba(255,255,255,.06);color:#666}
-.dept-status.working{background:#00d4ff22;color:#00d4ff}
-.dept-status.done{background:#00ff8822;color:#00ff88}
+.dept{
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.4);
+  border:1px solid rgba(44,44,44,0.06);
+  transition:all 0.3s ease;
+  position:relative;
+  overflow:hidden;
+}
+
+.dept::before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:3px;
+  background:var(--green);
+  opacity:0;
+  transition:opacity 0.3s ease;
+}
+
+.dept.working{
+  border-color:var(--green);
+  background:rgba(104,179,176,0.08);
+  box-shadow: 0 4px 12px rgba(104,179,176,0.15);
+}
+
+.dept.working::before{
+  opacity:1;
+  width:4px;
+}
+
+.dept.done{
+  border-color:var(--willow);
+  background:rgba(120,146,98,0.08);
+}
+
+.dept.done::before{
+  background:var(--willow);
+  opacity:1;
+}
+
+.dept-name{
+  font-weight:600;
+  font-size:.9em;
+  color:var(--ink);
+}
+
+.dept-task{
+  font-size:.75em;
+  color:var(--ink-light);
+  margin-top:4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.dept-status{
+  font-size:.7em;
+  float:right;
+  padding:3px 10px;
+  border-radius:12px;
+  font-weight:500;
+}
+
+.dept-status.idle{
+  background:rgba(44,44,44,0.06);
+  color:var(--ink-light);
+}
+
+.dept-status.working{
+  background:rgba(104,179,176,0.15);
+  color:var(--green-dark);
+}
+
+.dept-status.done{
+  background:rgba(120,146,98,0.15);
+  color:var(--willow);
+}
+
 /* 中栏：阶段+里程碑 */
-.phases{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.phase-step{text-align:center;flex:1;min-width:60px}
-.phase-circle{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:.8em;transition:.3s}
-.phase-step.active .phase-circle{background:#00d4ff33;border:2px solid #00d4ff;box-shadow:0 0 12px #00d4ff44}
-.phase-step.done .phase-circle{background:#00ff8833;border:2px solid #00ff88}
-.phase-lbl{font-size:.7em;color:#555}
-.phase-step.active .phase-lbl{color:#00d4ff;font-weight:600}
-.phase-step.done .phase-lbl{color:#00ff88}
-.milestones{margin-top:16px}
-.mile{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85em}
-.mile-icon{width:20px;text-align:center}
-.mile.pending{color:#555}.mile.active{color:#00d4ff}.mile.done{color:#00ff88}
+.phases{
+  display:flex;
+  gap:12px;
+  margin-bottom:24px;
+  flex-wrap:wrap;
+  position:relative;
+  padding:8px 0;
+}
+.phases::before{
+  content:'';
+  position:absolute;
+  top:28px;
+  left:20px;
+  right:20px;
+  height:2px;
+  background:linear-gradient(90deg,var(--green) 0%,var(--sky) 50%,var(--willow) 100%);
+  opacity:0.2;
+  z-index:0;
+}
+
+.phase-step{
+  text-align:center;
+  flex:1;
+  min-width:70px;
+  position: relative;
+}
+
+.phase-step.active{
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.phase-circle{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:rgba(44,44,44,0.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 6px;
+  font-size:.85em;
+  font-weight:600;
+  transition:all 0.3s ease;
+  border:2px solid transparent;
+  position:relative;
+  z-index:1;
+}
+
+.phase-step.active .phase-circle{
+  background:var(--green-dark);
+  border:2px solid var(--green-dark);
+  color:var(--white);
+  box-shadow:0 0 12px rgba(104,179,176,0.3);
+  animation:pulse 2s infinite;
+}
+
+.phase-step.done .phase-circle{
+  background:rgba(120,146,98,0.15);
+  border:2px solid var(--willow);
+  color:var(--willow);
+}
+
+.phase-lbl{
+  font-size:.75em;
+  color:var(--ink-light);
+  font-weight:500;
+}
+
+.phase-step.active .phase-lbl{
+  color:var(--green-dark);
+  font-weight:600;
+}
+
+.phase-step.done .phase-lbl{
+  color:var(--willow);
+}
+
+.milestones{
+  margin-top:20px;
+}
+
+.mile{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(44,44,44,0.06);
+  font-size:.85em;
+  transition:all 0.3s ease;
+}
+
+.phase-step:not(:last-child)::after{
+  content:'→';
+  position:absolute;
+  right:-8px;
+  top:18px;
+  font-size:1em;
+  color:var(--green);
+  opacity:0.5;
+}
+
+.phase-step:nth-child(4)::after{
+  content:'';
+}
+
+.mile-icon{
+  width:24px;
+  text-align:center;
+}
+
+.mile.pending{color:var(--ink-light)}
+.mile.active{color:var(--green-dark);animation:bounce 1s ease infinite}
+.mile.done{color:var(--willow)}
+
+#dept-panel h2{border-color:var(--willow)}
+#dept-panel h2::before{background:var(--willow)}
+
+.grid>.card:nth-child(2) h2{border-color:var(--sky)}
+.grid>.card:nth-child(2) h2::before{background:var(--sky)}
+
+.grid>.card:last-child h2{border-color:var(--gold)}
+.grid>.card:last-child h2::before{background:var(--gold)}
+
 /* 右栏：商讨 */
-.disc-round{margin-bottom:16px}
-.disc-round h3{font-size:.85em;color:#f093fb;margin-bottom:8px}
-.disc-bubble{background:rgba(255,255,255,.03);border-radius:8px;padding:10px;margin-bottom:6px;font-size:.8em;border-left:3px solid transparent}
-.disc-bubble.mimo{border-color:#4facfe}
-.disc-bubble.longcat{border-color:#f5576c}
-.disc-bubble .speaker{font-size:.7em;color:#888;margin-bottom:4px}
+.disc-round{
+  margin-bottom:20px;
+}
+
+.disc-round h3{
+  font-size:.9em;
+  color:var(--green-dark);
+  margin-bottom:10px;
+  font-weight:600;
+}
+
+.disc-bubble{
+  background:rgba(255,255,255,0.5);
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:8px;
+  font-size:.85em;
+  line-height:1.6;
+  border-left:3px solid transparent;
+  transition:all 0.3s ease;
+}
+
+.disc-bubble:hover{
+  background:rgba(255,255,255,0.7);
+}
+
+.disc-bubble.mimo{border-color:var(--green)}
+.disc-bubble.longcat{border-color:var(--willow)}
+.disc-bubble.assistant{border-color:var(--sky)}
+
+.disc-bubble .speaker{
+  font-size:.75em;
+  color:var(--white);
+  margin-bottom:6px;
+  font-weight:600;
+  display:inline-block;
+  background:var(--green-dark);
+  padding:2px 8px;
+  border-radius:12px;
+}
+
 /* 演练按钮 */
-.demo-bar{text-align:center;padding:12px;border-top:1px solid rgba(255,255,255,.06)}
-.demo-bar button{padding:8px 20px;border:1px solid #00d4ff44;background:#00d4ff11;color:#00d4ff;border-radius:8px;cursor:pointer;font-size:.85em;margin:0 4px;transition:.2s}
-.demo-bar button:hover{background:#00d4ff22}
+.demo-bar{
+  text-align:center;
+  padding:16px;
+  border-top:1px solid rgba(44,44,44,0.08);
+  position:relative;
+  z-index:1;
+  background:rgba(255,255,255,0.3);
+}
+
+.demo-bar button{
+  padding:10px 24px;
+  border:none;
+  background:var(--green-dark);
+  color:var(--white);
+  border-radius:8px;
+  cursor:pointer;
+  font-size:.85em;
+  margin:0 6px;
+  transition:all 0.3s ease;
+  font-family:'Noto Serif SC',serif;
+  font-weight:600;
+}
+
+.demo-bar button:hover{
+  background:var(--green);
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(104,179,176,0.2);
+}
+
+/* 动画定义 */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(104, 179, 176, 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(104, 179, 176, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(104, 179, 176, 0); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* 水墨装饰元素 */
+.ink-wash{
+  position:absolute;
+  width:100px;
+  height:100px;
+  background:radial-gradient(circle,rgba(44,44,44,0.03) 0%,transparent 70%);
+  border-radius:50%;
+  pointer-events:none;
+}
+
+/* 春日装饰 */
+.spring-deco{
+  position:fixed;
+  bottom:20px;
+  left:20px;
+  font-size:2em;
+  opacity:0.3;
+  pointer-events:none;
+  z-index:0;
+}
+
 /* 响应式 */
-@media(max-width:900px){.grid{grid-template-columns:1fr;}}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr;}
+  .header h1{font-size:1.5em;}
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar{
+  width:6px;
+}
+
+::-webkit-scrollbar-track{
+  background:rgba(44,44,44,0.02);
+  border-radius:3px;
+}
+
+::-webkit-scrollbar-thumb{
+  background:rgba(104,179,176,0.3);
+  border-radius:3px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+  background:rgba(104,179,176,0.5);
+}
 </style>
 </head>
 <body>
+
+<div class="spring-deco">🌸</div>
+
 <div class="header">
-  <h1>🏛️ 伊迪丝可视化面板</h1>
+  <h1>🏛️ <span>伊迪丝</span>可视化面板</h1>
   <div id="badge" class="phase-badge idle">待命</div>
 </div>
+
 <div class="grid">
   <!-- 左：部门 -->
-  <div class="card" id="dept-panel"><h2>🏢 部门状态</h2><div id="dept-list"></div></div>
+  <div class="card" id="dept-panel">
+    <h2>🏢 部门状态</h2>
+    <div id="dept-list"></div>
+  </div>
+  
   <!-- 中：阶段+里程碑 -->
   <div class="card">
     <h2>📊 流程阶段</h2>
     <div class="phases" id="phases"></div>
-    <h2 style="margin-top:16px">🎯 里程碑</h2>
-    <div class="milestones" id="mile-list"><div class="mile pending"><span class="mile-icon">⏳</span>等待任务开始</div></div>
+    <h2 style="margin-top:20px">🎯 里程碑</h2>
+    <div class="milestones" id="mile-list">
+      <div class="mile pending">
+        <span class="mile-icon">⏳</span>
+        等待任务开始
+      </div>
+    </div>
   </div>
+  
   <!-- 右：商讨 -->
-  <div class="card"><h2>💬 三轮商讨</h2><div id="disc-list"></div></div>
+  <div class="card">
+    <h2>💬 三轮商讨</h2>
+    <div id="disc-list"></div>
+  </div>
 </div>
+
 <div class="demo-bar">
   <button onclick="demo('start')">▶ 模拟开始</button>
   <button onclick="demo('full')">▶ 模拟完整流程</button>
@@ -78,29 +550,76 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
-const PHASES=[{id:"understand",lbl:"① 理解"},{id:"round1",lbl:"② 第一轮"},{id:"round2",lbl:"③ 第二轮"},{id:"round3",lbl:"④ 第三轮"},{id:"confirm",lbl:"⑤ 确认"},{id:"execute",lbl:"⑥ 执行"},{id:"deliver",lbl:"⑦ 交付"}];
-const DEPTS=["枢密院","市场运营部","工部","通商部","户部","美术设计","交互设计","刑部","门下省"];
-const PHASE_NAMES={idle:"待命",understand:"理解需求中…",round1:"第一轮商讨中…",round2:"第二轮商讨中…",round3:"第三轮商讨中…",confirm:"等待确认…",execute:"执行中…",deliver:"交付中…"};
+const PHASES=[
+  {id:"understand",lbl:"① 理解"},
+  {id:"round1",lbl:"② 第一轮"},
+  {id:"round2",lbl:"③ 第二轮"},
+  {id:"dialogue",lbl:"④ 对话讨论"},
+  {id:"round3",lbl:"⑤ 第三轮"},
+  {id:"confirm",lbl:"⑥ 确认"},
+  {id:"execute",lbl:"⑦ 执行"},
+  {id:"deliver",lbl:"⑧ 交付"}
+];
+
+const DEPTS=[
+  "枢密院","市场运营部","工部","通商部","户部",
+  "美术设计","交互设计","视频创作部","刑部","门下省"
+];
+
+const PHASE_NAMES={
+  idle:"待命",
+  understand:"理解需求中…",
+  round1:"第一轮商讨中…",
+  round2:"第二轮商讨中…",
+  dialogue:"对话讨论中…",
+  round3:"第三轮商讨中…",
+  confirm:"等待确认…",
+  execute:"执行中…",
+  deliver:"交付中…"
+};
 
 // 初始化
 function init(){
-  document.getElementById("phases").innerHTML=PHASES.map(p=>`<div class="phase-step" id="p-${p.id}"><div class="phase-circle">${p.lbl.charAt(0)}</div><div class="phase-lbl">${p.lbl.slice(2)}</div></div>`).join("");
-  document.getElementById("dept-list").innerHTML=DEPTS.map(d=>`<div class="dept" id="d-${d}"><span class="dept-status idle" id="ds-${d}">待命</span><div class="dept-name">${d}</div><div class="dept-task" id="dt-${d}"></div></div>`).join("");
-  fetch("/api/state").then(r=>r.json()).then(applyState);
+  document.getElementById("phases").innerHTML=PHASES.map(p=>
+    '<div class="phase-step" id="p-'+p.id+'">'+
+    '<div class="phase-circle">'+p.lbl.charAt(0)+'</div>'+
+    '<div class="phase-lbl">'+p.lbl.slice(2)+'</div>'+
+    '</div>'
+  ).join("");
+  
+  document.getElementById("dept-list").innerHTML=DEPTS.map(d=>
+    '<div class="dept" id="d-'+d+'" onclick="openSidebar(\''+d+'\')" style="cursor:pointer">'+
+    '<span class="dept-status idle" id="ds-'+d+'">待命</span>'+
+    '<div class="dept-name">'+d+'</div>'+
+    '<div class="dept-task" id="dt-'+d+'"></div>'+
+    '</div>'
+  ).join("");
+  
+  fetch("/api/state").then(function(r){return r.json()}).then(applyState);
 }
 
 function applyState(s){
   setPhase(s.phase);
-  Object.entries(s.departments).forEach(([d,info])=>setDept(d,info.status,info.task));
-  if(s.milestones)s.milestones.forEach(m=>setMile(m.name,m.status));
-  s.discussions.forEach(d=>addDisc(d));
+  Object.keys(s.departments).forEach(function(d){
+    setDept(d,s.departments[d].status,s.departments[d].task);
+  });
+  if(s.milestones)s.milestones.forEach(function(m){setMile(m.name,m.status)});
+  s.discussions.forEach(function(d){addDisc(d)});
 }
 
 // SSE
-const es=new EventSource("/stream");
-es.onmessage=e=>{
-  const d=JSON.parse(e.data);
-  if(d.t==="phase")setPhase(d.v);
+var es=new EventSource("/stream");
+es.onopen=function(){console.log("✓ SSE connected")};
+es.onerror=function(){console.log("✗ SSE disconnected");console.log("Attempting to reconnect in 3 seconds...");setTimeout(function(){es=new EventSource("/stream");es.onopen=function(){console.log("✓ SSE reconnected")};es.onerror=arguments.callee;es.onmessage=es.onmessage||function(e){var d=JSON.parse(e.data);if(d.t==="init"){if(d.phase)setPhase(d.phase);if(d.departments)Object.keys(d.departments).forEach(function(n){setDept(n,d.departments[n].status,d.departments[n].task)});if(d.discussions)d.discussions.forEach(function(x){addDisc(x)});if(d.milestones)d.milestones.forEach(function(m){setMile(m.name,m.status)})} else if(d.t==="phase")setPhase(d.v);else if(d.t==="dept")setDept(d.name,d.status,d.task);else if(d.t==="disc")addDisc(d);else if(d.t==="mile")setMile(d.name,d.status);else if(d.t==="reset")location.reload();};},3000)};
+es.onmessage=function(e){
+  var d=JSON.parse(e.data);
+  if(d.t==="init"){
+    // 连接时接收完整状态
+    if(d.phase)setPhase(d.phase);
+    if(d.departments)Object.keys(d.departments).forEach(function(n){setDept(n,d.departments[n].status,d.departments[n].task)});
+    if(d.discussions)d.discussions.forEach(function(x){addDisc(x)});
+    if(d.milestones)d.milestones.forEach(function(m){setMile(m.name,m.status)});
+  } else if(d.t==="phase")setPhase(d.v);
   else if(d.t==="dept")setDept(d.name,d.status,d.task);
   else if(d.t==="disc")addDisc(d);
   else if(d.t==="mile")setMile(d.name,d.status);
@@ -108,98 +627,312 @@ es.onmessage=e=>{
 };
 
 function setPhase(p){
-  const idx=PHASES.findIndex(x=>x.id===p);
-  PHASES.forEach((ph,i)=>{
-    const el=document.getElementById("p-"+ph.id);
-    el.className="phase-step"+(i<idx?" done":i===idx?" active":"");
+  var idx=-1;
+  for(var i=0;i<PHASES.length;i++){
+    if(PHASES[i].id===p){idx=i;break;}
+  }
+  PHASES.forEach(function(ph,i){
+    var el=document.getElementById("p-"+ph.id);
+    if(i<idx)el.className="phase-step done";
+    else if(i===idx)el.className="phase-step active";
+    else el.className="phase-step";
   });
-  const badge=document.getElementById("badge");
+  var badge=document.getElementById("badge");
   badge.textContent=PHASE_NAMES[p]||p;
   badge.className="phase-badge "+(p==="idle"?"idle":"active");
 }
 
 function setDept(name,status,task){
-  const card=document.getElementById("d-"+name);
+  var card=document.getElementById("d-"+name);
   if(!card)return;
   card.className="dept"+(status==="working"?" working":status==="done"?" done":"");
-  const st=document.getElementById("ds-"+name);
+  var st=document.getElementById("ds-"+name);
   st.textContent=status==="idle"?"待命":status==="working"?"工作中":"已完成";
   st.className="dept-status "+status;
   if(task!==undefined)document.getElementById("dt-"+name).textContent=task;
 }
 
 function setMile(name,status){
-  const list=document.getElementById("mile-list");
-  let el=list.querySelector(`[data-mile="${name}"]`);
-  if(!el){el=document.createElement("div");el.dataset.mile=name;list.appendChild(el);}
-  const icon=status==="done"?"✅":status==="active"?"🔄":"⏳";
+  var list=document.getElementById("mile-list");
+  var el=list.querySelector('[data-mile="'+name+'"]');
+  if(!el){
+    el=document.createElement("div");
+    el.dataset.mile=name;
+    list.appendChild(el);
+  }
+  var icon=status==="done"?"✅":status==="active"?"🔄":"⏳";
   el.className="mile "+status;
-  el.innerHTML=`<span class="mile-icon">${icon}</span>${name}`;
+  el.innerHTML='<span class="mile-icon">'+icon+'</span>'+name;
 }
 
 function addDisc(d){
-  const list=document.getElementById("disc-list");
-  const cls=d.speaker.includes("小米")||d.speaker.includes("MiMo")?"mimo":"longcat";
-  const div=document.createElement("div");
-  div.innerHTML=`<div class="disc-bubble ${cls}"><div class="speaker">第${d.round}轮 · ${d.speaker} · ${d.ts||""}</div>${d.content}</div>`;
+  var list=document.getElementById("disc-list");
+  var cls="assistant";
+  if(d.speaker.indexOf("小米")>=0||d.speaker.indexOf("MiMo")>=0)cls="mimo";
+  else if(d.speaker.indexOf("LongCat")>=0)cls="longcat";
+  var div=document.createElement("div");
+  div.innerHTML='<div class="disc-bubble '+cls+'">'+
+    '<div class="speaker">第'+d.round+'轮 · '+d.speaker+' · '+(d.ts||"")+'</div>'+
+    d.content+
+    '</div>';
   list.appendChild(div);
   list.scrollTop=list.scrollHeight;
 }
 
-async function api(path,data){return fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});}
+function api(path,data){
+  return fetch(path,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
+}
 
-async function reset(){await api("/api/reset",{});location.reload();}
+function reset(){
+  api("/api/reset",{}).then(function(){location.reload()});
+}
 
 // 演练
-async function demo(mode){
-  const depts=["枢密院","通商部","工部"];
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function demo(mode){
+  var btns=document.querySelectorAll('.demo-bar button');
+  btns.forEach(function(b){b.disabled=true;b.style.opacity='0.6'});
+  var clicked=event?event.target:btns[0];
+  clicked.textContent='处理中…';
+  var depts=["枢密院","通商部","工部"];
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 
-  await api("/api/phase",{phase:"understand"});
-  await api("/api/milestone",{name:"理解需求",status:"active"});
-  await api("/api/department",{department:"枢密院",status:"working",task:"分析真实意图"});
-  await sleep(800);
-  await api("/api/discussion",{round:1,speaker:"小米",content:"用户需要实时监控伊迪丝系统的商讨过程和部门状态。核心需求：可视化流程进度。"});
-  await sleep(600);
-  await api("/api/discussion",{round:1,speaker:"LongCat",content:"风险点：SSE连接可能断开，需要重连机制。建议增加心跳检测。"});
-  await api("/api/department",{department:"枢密院",status:"done"});
-  await api("/api/milestone",{name:"理解需求",status:"done"});
-
-  if(mode!=="start"){
-    await api("/api/phase",{phase:"round1"});
-    await api("/api/milestone",{name:"第一轮商讨",status:"active"});
-    await sleep(500);
-    await api("/api/discussion",{round:2,speaker:"小米",content:"技术方案：Flask + SSE。前端纯HTML/CSS/JS，零依赖。端口8080自动探测。"});
-    await sleep(500);
-    await api("/api/discussion",{round:2,speaker:"LongCat",content:"补充方案：增加WebSocket备选，SSE失败时自动降级。前端增加断线重连。"});
-    await api("/api/milestone",{name:"第一轮商讨",status:"done"});
-
-    await api("/api/phase",{phase:"round2"});
-    await api("/api/milestone",{name:"第二轮商讨",status:"active"});
-    await sleep(500);
-    await api("/api/discussion",{round:3,speaker:"小米",content:"最终方案：采用SSE方案，增加自动重连。部门状态实时推送，商讨内容流式展示。"});
-    await api("/api/milestone",{name:"第二轮商讨",status:"done"});
-
-    await api("/api/phase",{phase:"confirm"});
-    await api("/api/milestone",{name:"用户确认",status:"active"});
-    await sleep(1000);
-    await api("/api/milestone",{name:"用户确认",status:"done"});
-
-    await api("/api/phase",{phase:"execute"});
-    await api("/api/milestone",{name:"执行任务",status:"active"});
-    for(const d of depts){
-      await api("/api/department",{department:d,status:"working",task:`${d}执行中…`});
-      await sleep(600);
-      await api("/api/department",{department:d,status:"done"});
+  api("/api/phase",{phase:"understand"});
+  api("/api/milestone",{name:"理解需求",status:"active"});
+  api("/api/department",{department:"枢密院",status:"working",task:"分析真实意图"});
+  sleep(800).then(function(){
+    return api("/api/discussion",{round:1,speaker:"小米",content:"用户需要实时监控伊迪丝系统的商讨过程和部门状态。核心需求：可视化流程进度。"});
+  }).then(function(){
+    return sleep(600);
+  }).then(function(){
+    return api("/api/discussion",{round:1,speaker:"LongCat",content:"风险点：SSE连接可能断开，需要重连机制。建议增加心跳检测。"});
+  }).then(function(){
+    api("/api/department",{department:"枢密院",status:"done"});
+    api("/api/milestone",{name:"理解需求",status:"done"});
+    if(mode!=="start"){
+      return sleep(500).then(function(){
+        api("/api/phase",{phase:"round1"});
+        api("/api/milestone",{name:"第一轮商讨",status:"active"});
+        return sleep(500);
+      }).then(function(){
+        return api("/api/discussion",{round:2,speaker:"小米",content:"技术方案：Flask + SSE。前端纯HTML/CSS/JS，零依赖。端口8080自动探测。"});
+      }).then(function(){
+        return sleep(500);
+      }).then(function(){
+        return api("/api/discussion",{round:2,speaker:"LongCat",content:"补充方案：增加WebSocket备选，SSE失败时自动降级。前端增加断线重连。"});
+      }).then(function(){
+        api("/api/milestone",{name:"第一轮商讨",status:"done"});
+        api("/api/phase",{phase:"round2"});
+        api("/api/milestone",{name:"第二轮商讨",status:"active"});
+        return sleep(500);
+      }).then(function(){
+        return api("/api/discussion",{round:3,speaker:"小米",content:"最终方案：采用SSE方案，增加自动重连。部门状态实时推送，商讨内容流式展示。"});
+      }).then(function(){
+        api("/api/milestone",{name:"第二轮商讨",status:"done"});
+        api("/api/phase",{phase:"confirm"});
+        api("/api/milestone",{name:"用户确认",status:"active"});
+        return sleep(1000);
+      }).then(function(){
+        api("/api/milestone",{name:"用户确认",status:"done"});
+        api("/api/phase",{phase:"execute"});
+        api("/api/milestone",{name:"执行任务",status:"active"});
+        return sleep(600);
+      }).then(function(){
+        return api("/api/department",{department:"枢密院",status:"working",task:"枢密院执行中…"});
+      }).then(function(){
+        return sleep(600);
+      }).then(function(){
+        api("/api/department",{department:"枢密院",status:"done"});
+        return api("/api/department",{department:"通商部",status:"working",task:"通商部执行中…"});
+      }).then(function(){
+        return sleep(600);
+      }).then(function(){
+        api("/api/department",{department:"通商部",status:"done"});
+        return api("/api/department",{department:"工部",status:"working",task:"工部执行中…"});
+      }).then(function(){
+        return sleep(600);
+      }).then(function(){
+        api("/api/department",{department:"工部",status:"done"});
+        api("/api/milestone",{name:"执行任务",status:"done"});
+        api("/api/phase",{phase:"deliver"});
+        api("/api/milestone",{name:"交付完成",status:"done"});
+        return api("/api/discussion",{round:3,speaker:"伊迪丝",content:"✅ 任务完成。面板功能：实时阶段展示、部门状态、三轮商讨流式输出、里程碑追踪。"});
+      }).then(function(){restoreBtns()}).catch(function(){restoreBtns()});
     }
-    await api("/api/milestone",{name:"执行任务",status:"done"});
-
-    await api("/api/phase",{phase:"deliver"});
-    await api("/api/milestone",{name:"交付完成",status:"done"});
-    await api("/api/discussion",{round:3,speaker:"伊迪丝",content:"✅ 任务完成。面板功能：实时阶段展示、部门状态、三轮商讨流式输出、里程碑追踪。"});
-  }
+  });
 }
+
+function restoreBtns(){
+  document.querySelectorAll('.demo-bar button').forEach(function(b,i){
+    b.disabled=false;b.style.opacity='1';
+    if(i===0)b.textContent='▶ 模拟开始';
+    else if(i===1)b.textContent='▶ 模拟完整流程';
+    else if(i===2)b.textContent='🔄 重置';
+  });
+}
+
 init();
 </script>
+
+<!-- 部门详情侧边栏 -->
+<div id="deptSidebar" class="sidebar">
+  <div class="sidebar-header">
+    <h3 id="deptName">部门名称</h3>
+    <button class="close-btn" onclick="closeSidebar()">×</button>
+  </div>
+  <div class="sidebar-content">
+    <div class="dept-info">
+      <h4>📋 职责</h4>
+      <p id="deptRole">-</p>
+    </div>
+    <div class="dept-info">
+      <h4>🔄 当前状态</h4>
+      <p id="deptStatus">-</p>
+    </div>
+    <div class="dept-info">
+      <h4>📝 当前任务</h4>
+      <p id="deptTask">-</p>
+    </div>
+    <div class="dept-info">
+      <h4>📚 知识库</h4>
+      <div id="deptKnowledge">暂无知识库</div>
+    </div>
+  </div>
+</div>
+<div id="sidebarOverlay" class="overlay" onclick="closeSidebar()"></div>
+
+<style>
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -450px;
+  width: 450px;
+  height: 100vh;
+  background: var(--paper);
+  box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+  font-family: 'Noto Serif SC', serif;
+}
+.sidebar.open {
+  right: 0;
+}
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 999;
+  transition: opacity 0.3s ease;
+}
+.overlay.show {
+  display: block;
+}
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 2px solid var(--green);
+  background: linear-gradient(135deg, rgba(104,179,176,0.1) 0%, rgba(120,146,98,0.1) 100%);
+}
+.sidebar-header h3 {
+  font-size: 1.4em;
+  color: var(--ink);
+  margin: 0;
+}
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--ink-light);
+  padding: 0 8px;
+  transition: color 0.2s;
+}
+.close-btn:hover {
+  color: var(--red);
+}
+.sidebar-content {
+  padding: 24px;
+}
+.dept-info {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 8px;
+  border-left: 4px solid var(--green);
+}
+.dept-info h4 {
+  color: var(--green-dark);
+  margin: 0 0 12px 0;
+  font-size: 1em;
+}
+.dept-info p {
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.6;
+}
+.knowledge-item {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 6px;
+  border: 1px solid var(--paper-dark);
+}
+.knowledge-item strong {
+  color: var(--green-dark);
+  display: block;
+  margin-bottom: 8px;
+}
+.knowledge-item p {
+  color: var(--ink-light);
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin: 0;
+}
+</style>
+
+<script>
+function openSidebar(deptName) {
+  fetch('/api/department/' + encodeURIComponent(deptName))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('deptName').textContent = data.name;
+      document.getElementById('deptRole').textContent = data.role;
+      document.getElementById('deptStatus').textContent = data.status;
+      document.getElementById('deptTask').textContent = data.current_task || '无';
+      
+      // 显示知识库
+      var knowledgeDiv = document.getElementById('deptKnowledge');
+      if (data.knowledge && data.knowledge.length > 0) {
+        knowledgeDiv.innerHTML = data.knowledge.map(function(k) {
+          return '<div class="knowledge-item"><strong>' + k.title + '</strong><p>' + k.preview + '</p></div>';
+        }).join('');
+      } else {
+        knowledgeDiv.textContent = '暂无知识库';
+      }
+      
+      document.getElementById('deptSidebar').classList.add('open');
+      document.getElementById('sidebarOverlay').classList.add('show');
+    })
+    .catch(function(err) {
+      console.error('Error:', err);
+    });
+}
+
+function closeSidebar() {
+  document.getElementById('deptSidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+</script>
+
 </body>
 </html>
