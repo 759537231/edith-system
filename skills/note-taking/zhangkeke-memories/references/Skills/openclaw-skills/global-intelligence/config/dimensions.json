@@ -1,0 +1,133 @@
+{
+  "dimensions": [
+    {
+      "id": "atlas",
+      "name": "地缘战略家",
+      "emoji": "🗺️",
+      "focus": "大国博弈、势力范围、联盟变迁",
+      "key_questions": [
+        "哪些国家在重新选边站？",
+        "势力范围正在如何重塑？",
+        "联盟体系的稳定性如何？",
+        "地缘缓冲区发生了什么变化？"
+      ],
+      "indicators": ["外交声明", "军事基地", "条约变动", "领导人互访"],
+      "confidence_weights": {"official": 0.9, "think_tank": 0.7, "media": 0.5}
+    },
+    {
+      "id": "plutus",
+      "name": "经济分析师",
+      "emoji": "💰",
+      "focus": "全球宏观、产业链、金融流动",
+      "key_questions": [
+        "主要经济体的政策走向？",
+        "全球供应链正在如何重组？",
+        "资本流向发生了什么变化？",
+        "哪些产业在脱钩/挂钩？"
+      ],
+      "indicators": ["央行政策", "贸易数据", "汇率波动", "股市债市"],
+      "confidence_weights": {"official": 0.9, "data": 0.8, "analysis": 0.6}
+    },
+    {
+      "id": "sentinel",
+      "name": "安全情报官",
+      "emoji": "🛡️",
+      "focus": "军事冲突、地区动荡、恐怖主义",
+      "key_questions": [
+        "军事冲突的烈度在升级还是缓和？",
+        "哪些地区出现新的安全真空？",
+        "军备竞赛是否在加速？",
+        "非传统安全威胁（网络/太空）如何？"
+      ],
+      "indicators": ["军事演习", "武器部署", "冲突事件", "情报活动"],
+      "confidence_weights": {"official": 0.8, "defense_media": 0.7, "osint": 0.5}
+    },
+    {
+      "id": "tesla",
+      "name": "科技竞争官",
+      "emoji": "⚡",
+      "focus": "技术封锁、AI竞争、航天博弈",
+      "key_questions": [
+        "技术封锁的范围在扩大还是缩小？",
+        "AI军备竞赛到了什么阶段？",
+        "关键技术的代差是多少？",
+        "科技联盟（芯片四方等）进展？"
+      ],
+      "indicators": ["出口管制", "专利数据", "投资流向", "人才流动"],
+      "confidence_weights": {"government": 0.9, "industry": 0.7, "tech_media": 0.5}
+    },
+    {
+      "id": "prometheus",
+      "name": "能源专家",
+      "emoji": "⛽",
+      "focus": "油气、新能源、战略储备",
+      "key_questions": [
+        "能源价格波动的真实原因？",
+        "能源转型对传统势力的冲击？",
+        "战略储备的释放/补充动态？",
+        "新能源产业链的控制权争夺？"
+      ],
+      "indicators": ["油价气价", "OPEC决策", "储备数据", "新能源投资"],
+      "confidence_weights": {"official": 0.9, "market": 0.8, "analysis": 0.6}
+    },
+    {
+      "id": "echo",
+      "name": "舆情监测员",
+      "emoji": "📢",
+      "focus": "社媒情绪、舆论战、认知作战",
+      "key_questions": [
+        "各方舆论场的主叙事是什么？",
+        "信息战/认知战的手段升级？",
+        "民众情绪对政策的影响？",
+        "哪些议题在被刻意放大/压制？"
+      ],
+      "indicators": ["热搜趋势", "外交辞令", "宣传口径", "民间反应"],
+      "confidence_weights": {"primary": 0.6, "secondary": 0.4, "speculation": 0.2}
+    },
+    {
+      "id": "chronos",
+      "name": "历史对照师",
+      "emoji": "📜",
+      "focus": "历史类比、周期规律、教训提取",
+      "key_questions": [
+        "当前局势与哪些历史时刻相似？",
+        "历史规律是否仍然适用？",
+        "哪些教训被忽视了？",
+        "周期理论（康波/基钦）的位置？"
+      ],
+      "indicators": ["历史案例", "周期数据", "决策者背景", "制度惯性"],
+      "confidence_weights": {"historical": 0.7, "analogy": 0.5, "theory": 0.4}
+    },
+    {
+      "id": "dragon",
+      "name": "中国影响官",
+      "emoji": "🐉",
+      "focus": "对华直接影响、反制选项、机会窗口",
+      "key_questions": [
+        "事件对中国的直接影响是什么？",
+        "中国的反制工具有哪些？",
+        "是否存在合作/套利机会？",
+        "国内政策会如何调整？"
+      ],
+      "indicators": ["官方表态", "贸易数据", "企业动态", "政策调整"],
+      "confidence_weights": {"official": 0.9, "data": 0.8, "analysis": 0.6}
+    },
+    {
+      "id": "politico",
+      "name": "政治现实校验器",
+      "emoji": "🏛️",
+      "focus": "政治决策逻辑、国内约束、领导人风险偏好、停火可行性",
+      "key_questions": [
+        "其他专家的假设忽略了哪些政治变量？",
+        "如果国内压力反转，结论还成立吗？",
+        "领导人的政治生存逻辑是什么？",
+        "停火/协议的政治可行性有多高？",
+        "什么事件会改变政治成本计算？"
+      ],
+      "indicators": ["选举周期", "执政联盟稳定性", "民意调查", "领导人公开表态变化", "右翼/保守派压力"],
+      "confidence_weights": {"direct_signal": 0.9, "structural_constraint": 0.8, "historical_analogy": 0.6},
+      "role": "verification_layer",
+      "description": "独立于4个团队的校验层，不参与团队分析，对8专家结论进行政治压力测试和概率修正"
+    }
+  ]
+}

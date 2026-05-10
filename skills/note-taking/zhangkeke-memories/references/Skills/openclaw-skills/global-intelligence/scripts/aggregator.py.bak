@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""
+global-intelligence / scripts / aggregator.py
+信息聚合器 — RSS + ProSearch 双引擎
+
+功能：
+  1. RSS 源抓取（feedparser，无依赖问题）
+  2. ProSearch 搜索（优先）
+  3. 自动去重 + 时间过滤
+"""
+
+import json
+import os
+import time
+import re
+import requests
+import subprocess
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse
+
+# ── ProSearch 路径 ────────────────────────────────────────────
+PROSEARCH = os.path.expanduser(
+    "~/Library/Application Support/QClaw/openclaw/config/skills/online-search/scripts/prosearch.cjs"
+)
+
+# ── RSS 抓取 ─────────────────────────────────────────────────
+
+def _fetch_rss(url: str, timeout: int = 10) -> List[Dict[str, str]]:
+    """抓取单个 RSS 源，返回标准化条目列表（requests + xml 标准库）"""
+    try:
+        resp = requests.get(url, timeout=timeout, headers={
+            'User-Agent': 'Mozilla/5.0 GlobalIntelligence/1.0'
+        }, proxies={'http': None, 'https': None})
+        resp.raise_for_status()
+        # 解析 XML（兼容 RSS 2.0 和 Atom）
+        root = ET.fromstring(resp.content)
+        # 检测格式
+        is_atom = root.tag.endswith('feed')
+        ns = '' if is_atom else ''  # 简化处理，直接用 tag 名
+        
+        entries = []
+        items = root.findall('.//item') or root.findall('.//entry')
+        
+        for item in items[:10]:
+            # title
+            title_el = item.find('title')
+            title = title_el.text.strip() if title_el is not None and title_el.text else ''
+            if not title:
+                continue
+            
+            # snippet / summary
+            snippet = ''
+            for tag in ['description', 'summary', 'content']:
+                el = item.find(tag)
+                if el is not None and el.text:
+                    snippet = re.sub(r'<[^>]+>', '', el.text).strip()
+                    break
+            
+            # link
+            link = ''
+            link_el = item.find('link')
+            if link_el is not None:
+                link = link_el.text or ''
+                if link_el.attrib.get('href'):
+                    link = link_el.attrib['href']
+            if not link:
+                link_el2 = item.find('.//{http://www.w3.org/2005/Atom}link')
+                if link_el2 is not None:
+                    link = link_el2.attrib.get('href', '')
+            
+            # date
+            pub_date = ''
+            for tag in ['pubDate', 'published', 'updated']:
+                el = item.find(tag)
+                if el is not None and el.text:
+                    pub_date = el.text.strip()[:10]  # 取前10字符（YYYY-MM-DD...）
+                    break
+            
+            # source
+            source = urlparse(url).netloc.replace('www.', '')
+            
+            entries.append({
+                'title': title[:200],
+                'snippet': snippet[:200],
+                'source': source,
+                'url': link,
+                'date': pub_date,
+                'type': 'rss'
+            })
+        return entries
+    except Exception:
+        return []
+
+
+def _fetch_all_rss(sources: List[Dict], days_back: int = 7) -> List[Dict[str, Any]]:
+    """
+    并发抓取多个 RSS 源。
+    
+    sources: [{"url": "...", "priority": 1}, ...]
+    """
+    all_entries = []
+    cutoff = datetime.now() - timedelta(days=days_back)
+    
+    for src in sources:
+        url = src.get('url', '')
+        priority = src.get('priority', 3)
+        if not url:
+            continue
+        # 高优先级源（priority=1）抓取更多
+        limit = 10 if priority <= 2 else 5
+        entries = _fetch_rss(url)
+        # 时间过滤
+        for e in entries:
+            e['priority'] = priority
+            e['limit'] = limit
+            all_entries.append(e)
+    
+    return all_entries
+
+
+# ── ProSearch 搜索 ──────────────────────────────────────────
+
+def _search_prosearch(keyword: str, days_back: int = 7, max_results: int = 10) -> List[Dict]:
+    """调用 ProSearch API"""
+    prosearch_path = os.path.expanduser(PROSEARCH)
+    if not os.path.exists(prosearch_path):
+        return []
+
+    now = datetime.now()
+    from_ts = int((now - timedelta(days=days_back)).timestamp())
+    to_ts = int(now.timestamp())
+
+    cmd = [
+        'node', prosearch_path,
+        json.dumps({'keyword': keyword, 'from_time': from_ts, 'to_time': to_ts})
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=20
+        )
+        if result.returncode != 0:
+            return []
+        resp = json.loads(result.stdout)
+        if not resp.get('success'):
+            return []
+        docs = resp.get('data', {}).get('docs', [])
+        return [
+            {
+                'title': d.get('title', ''),
+                'snippet': d.get('passage', '')[:200],
+                'source': d.get('site', ''),
+                'url': d.get('url', ''),
+                'date': d.get('date', ''),
+                'keyword': keyword,
+                'type': 'search'
+            }
+            for d in docs if d.get('title')
+        ][:max_results]
+    except Exception:
+        return []
+
+
+# ── 主聚合器 ─────────────────────────────────────────────────
+
+class IntelligenceAggregator:
+    """
+    双引擎情报聚合：
+      1. RSS — 持续监控高质量媒体
+      2. ProSearch — 主动搜索特定主题
+    """
+
+    def __init__(self):
+        self.config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'config', 'sources.json'
+        )
+        self.config = self._load_config()
+
+    def _load_config(self) -> Dict:
+        if os.path.exists(self.config_path):
+            with open(self.config_path, encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+
+    def fetch(
+        self,
+        topic: str,
+        keywords: Optional[List[str]] = None,
+        days_back: int = 7,
+        max_results: int = 12
+    ) -> List[Dict[str, Any]]:
+        """
+        主入口：聚合 ProSearch 搜索结果。
+        
+        策略：
+          - 去掉 RSS（国内网络不通，默认跳过）
+          - 关键词从 topic 自动扩展（中文词+英文词）
+          - 多词并行搜索，最大化情报覆盖率
+          - 标题+URL双重去重
+        """
+        import re as _re
+
+        # ── 关键词扩展 ────────────────────────────────────
+        base_kws = [topic]
+        if keywords:
+            base_kws.extend(keywords)
+        else:
+            # 从 topic 自动提取关键词
+            extracted = _re.findall(
+                r'[一-鿿]{2,6}|[A-Za-z]{2,10}[0-9]*',
+                topic
+            )
+            filtered = [w for w in extracted if len(w) >= 2][:4]
+            base_kws.extend(filtered)
+
+        print(f"   🔍 搜索词：{base_kws[:5]}")
+
+        # ── 多词并行搜索 ────────────────────────────────────
+        seen_titles = set()
+        seen_urls = set()
+        all_intel = []
+
+        for kw in base_kws[:5]:
+            results = _search_prosearch(kw, days_back, max_results // min(len(base_kws[:5]), 1) + 2)
+            for item in results:
+                title = item.get('title', '').strip()
+                url = item.get('url', '').strip()
+                if not title:
+                    continue
+                if title in seen_titles or (url and url in seen_urls):
+                    continue
+                seen_titles.add(title)
+                if url:
+                    seen_urls.add(url)
+                item['keyword'] = kw
+                all_intel.append(item)
+
+        print(f"      获取 {len(all_intel)} 条（去重后）")
+        return all_intel[:max_results]
+
+    def _filter_by_topic(
+        self,
+        items: List[Dict],
+        topic: str,
+        keywords: Optional[List[str]]
+    ) -> List[Dict]:
+        """基于主题关键词过滤情报（简化版，直接子串匹配）"""
+        all_kw = [topic] + (keywords or [])
+        scored = []
+        for item in items:
+            text = f"{item.get('title', '')} {item.get('snippet', '')}"
+            # 只要包含任意一个关键词就算相关
+            if any(kw in text for kw in all_kw if len(kw) >= 2):
+                scored.append((1, item))
+            else:
+                scored.append((0, item))
+        scored.sort(key=lambda x: -x[0])
+        return [item for _, item in scored]
+
+
+def fetch_intelligence(
+    topic: str,
+    keywords: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
+    """便捷入口"""
+    agg = IntelligenceAggregator()
+    results = agg.fetch(topic, keywords)
+    # 保底：若抓取为空，用 topic 本身搜索
+    if not results:
+        results = agg.fetch(topic, None)
+    return results
+
+
+# ── CLI ────────────────────────────────────────────────────
+
+def main():
+    topic = sys.argv[1] if len(sys.argv) > 1 else '中美AI竞争'
+    print(f"📡 情报聚合:「{topic}」\n")
+    results = fetch_intelligence(topic)
+    print(f"\n✅ 获取 {len(results)} 条情报:\n")
+    for i, r in enumerate(results[:8], 1):
+        src_icon = '📰' if r.get('type') == 'rss' else '🔍'
+        print(f"{i}. {src_icon} {r['title']}")
+        print(f"   来源: {r.get('source','?')} | 日期: {r.get('date','?')} | 置信:{r.get('priority','?')}")
+        print(f"   {r.get('snippet','')[:80]}...")
+        print()
+
+
+if __name__ == '__main__':
+    import sys
+    main()

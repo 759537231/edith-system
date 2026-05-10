@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+validate_report.py — GI报告质量校验器
+校验10条标准，不合规章节打回重写
+"""
+
+import sys
+import os
+import re
+
+RULES = [
+    (1,  "core_conclusion", "核心结论不超过100字",        None),
+    (2,  "data_source",     "每团队必须有「数据来源」字段", r"数据来源"),
+    (3,  "biz_impact",      "每团队必须有「对业务的影响」",   r"对业务的影响"),
+    (4,  "probability",     "概率数字必须有依据说明",          r"依据|根据|来自|基于"),
+    (5,  "forbidden_1",     "禁止「需进一步观察」",           r"需进一步观察|需要进一步观察"),
+    (6,  "forbidden_2",     "禁止「具体情况具体分析」",       r"具体情况具体分析"),
+    (7,  "forbidden_3",     "禁止「有待研究」",              r"有待研究|有待进一步研究"),
+    (8,  "action_verb",     "行动建议每条必须有动词开头",     None),
+    (9,  "action_time",     "行动建议每条必须有截止时间",     None),
+    (10, "freight_source",  "运价数据必须有来源标注",         None),
+]
+
+TEAMS = ["地缘战略团队", "经济资源团队", "安全军事团队", "舆情中国团队"]
+ACTION_HEADERS = ["立即行动", "短期布局", "中期规划", "短期（", "立即（", "中期（"]
+
+
+def validate(text: str) -> dict:
+    errors = []
+    lines = text.split("\n")
+
+    # ── Rule 1: 核心结论不超过100字 ──────────────────────
+    for i, line in enumerate(lines):
+        if "核心结论" in line:
+            for j in range(i + 1, min(i + 8, len(lines))):
+                nxt = lines[j].strip()
+                if nxt and not nxt.startswith("#") and not nxt.startswith("|") and nxt != "---":
+                    clean = re.sub(r"[*_#`>\[\]|]", "", nxt).strip()
+                    if len(clean) > 100:
+                        errors.append({
+                            "rule_id": 1, "section": "核心结论",
+                            "message": f"超过100字（当前{len(clean)}字），需精简",
+                            "severity": "error"})
+                    break
+
+    # ── Rules 2-3: 团队必须有指定字段 ───────────────────
+    # 泛化匹配：biz_impact 接受"对XX的影响"系列字段名
+    BIZ_PATTERNS = [r"对业务的影响", r"对经济的影响", r"对局势的影响",
+                     r"对安全格局的影响", r"对中国外交的影响", r"对XX的影响"]
+    SOURCE_PATTERNS = [r"数据来源", r"数据来源"]
+
+    for team in TEAMS:
+        found_source = False
+        found_impact = False
+        for i, line in enumerate(lines):
+            if team in line:
+                block = "\n".join(lines[i:min(i + 50, len(lines))])
+                if any(re.search(p, block) for p in SOURCE_PATTERNS):
+                    found_source = True
+                if any(re.search(p, block) for p in BIZ_PATTERNS):
+                    found_impact = True
+                if found_source and found_impact:
+                    break
+        if not found_source:
+            errors.append({
+                "rule_id": 2, "section": team,
+                "message": "缺少「数据来源」字段",
+                "severity": "error"})
+        if not found_impact:
+            errors.append({
+                "rule_id": 3, "section": team,
+                "message": "缺少「对XX的影响」字段（泛指经济/局势/安全/外交等影响）",
+                "severity": "error"})
+
+    # ── Rules 5-7: 禁止套话 ──────────────────────────
+    for rule_id, field, msg, pattern in RULES:
+        if field.startswith("forbidden"):
+            for i, line in enumerate(lines):
+                if re.search(pattern, line):
+                    errors.append({
+                        "rule_id": rule_id, "section": f"第{i + 1}行",
+                        "message": f"违反质量标准：{msg}",
+                        "severity": "error"})
+
+    # ── Rule 8: 行动建议每条必须有动词开头 ─────────────────
+    NOUN_START = ["的", "了", "是", "在", "有", "与", "和", "为", "于",
+                  "这", "那", "各", "每", "该", "通过", "根据", "对于"]
+    in_action = False
+    for i, line in enumerate(lines):
+        ls = line.strip()
+        for hdr in ACTION_HEADERS:
+            if hdr in ls:
+                in_action = True
+                break
+        if in_action:
+            if ls.startswith("-") or re.match(r"^\d+[.、]", ls):
+                clean = re.sub(r"^[-*\[\]\d.、]+", "", ls).strip()
+                words = clean.split()
+                if words and words[0] in NOUN_START:
+                    errors.append({
+                        "rule_id": 8, "section": f"第{i + 1}行",
+                        "message": f"行动建议必须以动词开头（当前：「{ls[:40]}」）",
+                        "severity": "error"})
+            elif not ls:
+                in_action = False
+
+    # ── Rule 9: 行动建议每条必须有截止时间 ─────────────
+    TIME_PATTERNS = [
+        r"\d{4}-\d{2}-\d{2}",          # 2026-04-25
+        r"\d{1,2}月\d{0,2}日",
+        r"本周", r"今日", r"本周内", r"明日",
+        r"近期", r"立即", r"随时",
+        r"1个月内", r"3个月内", r"6个月内",
+    ]
+    in_action = False
+    for i, line in enumerate(lines):
+        ls = line.strip()
+        for hdr in ACTION_HEADERS:
+            if hdr in ls:
+                in_action = True
+                continue
+        if in_action:
+            if ls.startswith("-") or re.match(r"^\d+[.、]", ls):
+                # 跳过纯分隔线和表头
+                if ls in ("---", "|----|") or ls.startswith("|"):
+                    continue
+                if not any(re.search(p, ls) for p in TIME_PATTERNS):
+                    errors.append({
+                        "rule_id": 9, "section": f"第{i + 1}行",
+                        "message": f"行动建议必须包含具体截止时间（当前：「{ls[:40]}」）",
+                        "severity": "error"})
+            elif ls and not ls.startswith("|"):
+                in_action = False
+
+    # ── Rule 10: 运价数据必须有来源 ───────────────────
+    freight_has_source = False
+    for line in lines:
+        if re.search(r"\$|USD|FEU|\u82d1|\u5143", line) and \
+           re.search(r"\u822a\u8fd0|\u8fd0\u4ef7|\u6210\u672c|\u4ef7\u683c", line):
+            if re.search(r"SCFI|FBX|\u8d27\u4ee3\u8be2\u4ef7|\u8239\u4e1c\u62a5\u4ef7|\u9879\u76ee\u62a5|\u5e02\u573a|\u6307\u6570|\u516c\u5f00|\u63a8\u65ad|\u80fd\u6e90", line):
+                freight_has_source = True
+                break
+    if not freight_has_source:
+        has_freight_num = any(re.search(r"\$\d", l) for l in lines)
+        if has_freight_num:
+            errors.append({
+                "rule_id": 10, "section": "\u822a\u8fd0\u6570\u636e",
+                "message": "\u822a\u8fd0/\u6210\u672c\u6570\u636e\u5fc5\u987b\u6807\u6ce8\u6765\u6e90\uff08\u5982\uff1aSCFI\u6307\u6570/\u8d27\u4ee3\u8be2\u4ef7/\u8239\u4e1c\u62a5\u4ef7\uff09",
+                "severity": "warn"})
+
+    # ── Rule 4: 概率依据 ─────────────────────────────
+    # 找含概率数字的行（必须是概率，不是百分比目标/置信度/置信）
+    PROB_INDICATORS = ["概率", "置信度", "触发条件", "情景", "风险"]
+    for i, line in enumerate(lines):
+        # 找"数字%"或"数字 percent"
+        m = re.search(r"(\d{1,3})%", line)
+        if not m:
+            continue
+        pct = m.group(1)
+        pct_int = int(pct)
+        # 判断是否是真的概率（0-100%之间，通常概率行含"概率"字样）
+        # 不报警的例外：置信度行（含"置信度"）、目标百分比行（含"提升至"/"达到"/"降至"）
+        if any(kw in line for kw in PROB_INDICATORS):
+            if "置信度" in line:
+                continue  # 置信度行，跳过
+            if any(kw in line for kw in ["提升", "达到", "降至", "压缩", "自主化率", "进口量"]):
+                continue  # 目标百分比，跳过
+            # 是概率但无依据
+            if not re.search(r"依据|根据|来自|基于|情报|专家|数据|市场|历史|类比", line):
+                errors.append({
+                    "rule_id": 4, "section": f"第{i + 1}行",
+                    "message": f"概率数字必须有依据说明（当前：「{line.strip()[:50]}」）",
+                    "severity": "warn"})
+
+    return {
+        "passed": len([e for e in errors if e["severity"] == "error"]) == 0,
+        "error_count": len([e for e in errors if e["severity"] == "error"]),
+        "warn_count": len([e for e in errors if e["severity"] == "warn"]),
+        "errors": errors,
+    }
+
+
+def print_report(result: dict):
+    print(f"\n{'=' * 50}")
+    print(f"报告校验结果: {'✅ 通过' if result['passed'] else '❌ 未通过'}  "
+          f"| 错误: {result['error_count']}  |  警告: {result['warn_count']}")
+    print(f"{'=' * 50}")
+    if not result["errors"]:
+        print("  ✅ 无问题，报告质量合格")
+        return
+    for e in result["errors"]:
+        icon = "❌" if e["severity"] == "error" else "⚠️ "
+        print(f"  {icon}[规则{e['rule_id']}] {e['section']}: {e['message']}")
+    if result["passed"]:
+        print("\n  ✅ 核心标准全部通过（有警告项但不影响输出）")
+    else:
+        print("\n  ❌ 有错误项，需打回对应章节重写后再校验")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("用法: python3 validate_report.py 报告文件.md")
+        sys.exit(1)
+    path = os.path.expanduser(sys.argv[1])
+    if not os.path.exists(path):
+        print(f"文件不存在: {path}")
+        sys.exit(1)
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    result = validate(text)
+    print_report(result)
+    sys.exit(0 if result["passed"] else 1)

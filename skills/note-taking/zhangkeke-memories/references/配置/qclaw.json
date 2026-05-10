@@ -1,0 +1,19 @@
+{
+  "authGatewayBaseUrl": "http://127.0.0.1:19000/proxy",
+  "cli": {
+    "nodeBinary": "/Applications/QClaw.app/Contents/Resources/node/node",
+    "openclawMjs": "/Users/labixiaoxin/Library/Application Support/QClaw/openclaw/node_modules/openclaw/openclaw.mjs",
+    "pid": 66965
+  },
+  "stateDir": "/Users/labixiaoxin/.qclaw",
+  "configPath": "/Users/labixiaoxin/.qclaw/openclaw.json",
+  "port": 28789,
+  "platform": "darwin",
+  "sharedParams": {
+    "guid": "155997d39f1f5502077f2739883b3c14de6bbe099f9709450e5f6fe26512274b",
+    "appVersion": "0.2.15",
+    "appChannel": "5001",
+    "platform": "Qclaw_MAC_ARM",
+    "sessionId": "b96713ba5cb99a5ea46dac35dcd52a00"
+  }
+}

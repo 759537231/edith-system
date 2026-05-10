@@ -1,0 +1,22 @@
+{
+  "description": "指南搜索模板 - 需要实时证据时使用",
+  "搜索增强": {
+    "场景": "当角色卡输出需要最新指南/研究支持时",
+    "方法": "调用搜索工具查询最新循证证据",
+    "搜索关键词模板": [
+      "[疾病名] clinical guidelines 2024 2025",
+      "[药物名] efficacy systematic review",
+      "[检查名] clinical utility guideline",
+      "糖尿病视网膜病变 treatment guidelines 2025",
+      "功能性视觉障碍 rehabilitation evidence"
+    ],
+    "可信来源优先级": [
+      "WHO",
+      "NICE (UK)",
+      "AAO (American Academy of Ophthalmology)",
+      "AAN (American Academy of Neurology)",
+      "中华医学会"
+    ]
+  },
+  "调用方式": "在SKILL.md中标注'{搜索补强}'，触发时自动搜索"
+}
