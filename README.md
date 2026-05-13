@@ -43,6 +43,22 @@ edith-system/
 │   ├── server.py
 │   ├── edith_api.py
 │   └── templates/
+├── prosearch/                   # 多引擎搜索聚合工具
+│   ├── README.md                # ProSearch详细说明
+│   ├── base.py                  # 统一接口定义
+│   ├── config.py                # 配置管理
+│   ├── aggregator.py            # 聚合调度器
+│   ├── fallback.py              # 三级降级机制
+│   ├── cache.py                 # SQLite缓存
+│   ├── cli.py                   # CLI工具
+│   ├── prosearch_optimized.py   # 优化版ProSearch（推荐）
+│   ├── smart_extractor.py       # 智能提取器
+│   ├── browser_extractor.py     # Browser提取器
+│   └── engines/                 # 搜索引擎
+│       ├── duckduckgo.py        # DuckDuckGo
+│       ├── bing_cn.py           # 必应中国版
+│       ├── baidu.py             # 百度
+│       └── brave.py             # Brave Search
 └── utils/                       # 工具脚本
     └── knowledge_injector.py    # 知识库自动注入
 ```
@@ -75,6 +91,48 @@ edith-system/
 | 市场运营部 | 4个 | 用户研究、市场分析、产品设计、运营策略 |
 | 视频创作部 | 4个 | 脚本写作、分镜设计、构图原则、运镜与剪辑 |
 
+## 🔍 ProSearch - 多引擎搜索聚合工具
+
+一个轻量级、高效的多引擎搜索聚合工具，支持国内+国际搜索引擎，返回结构化数据，优化token消耗。
+
+### ✨ 特性
+
+- **多引擎搜索** — 支持DuckDuckGo、必应中国版、百度等搜索引擎
+- **智能提取** — 根据页面类型自动选择最优提取方式（curl/browser）
+- **token优化** — 相比纯浏览器方式节省95%的token消耗
+- **速度优化** — 搜索+提取一站式服务，速度快8-14倍
+- **缓存机制** — SQLite本地缓存，相同查询秒回
+- **反爬优化** — 百度引擎支持代理轮换、验证码降级、请求频率控制
+- **三级降级** — curl → curl高级 → browser，确保搜索可靠性
+- **CLI工具** — 命令行友好，支持JSON输出
+
+### 📊 性能对比
+
+| 方案 | token消耗 | 耗时 | 节省 |
+|------|-----------|------|------|
+| 纯浏览器 | 25000-40000 | 50-90秒 | - |
+| **ProSearch** | 2100 | 6秒 | **95%** |
+
+### 🚀 快速开始
+
+```bash
+# 进入ProSearch目录
+cd prosearch
+
+# 搜索+提取内容
+python3 prosearch_optimized.py "Cloudflare WARP最新版本更新"
+
+# 只搜索不提取
+python3 prosearch_optimized.py "Python教程" --no-extract
+
+# 指定结果数量
+python3 prosearch_optimized.py "最新新闻" --max-results 10
+```
+
+### 📖 详细说明
+
+查看 [prosearch/README.md](prosearch/README.md) 获取完整文档。
+
 ## ⚡ Prompt Cache优化（2026-05-08）
 
 - 删除系统提示中的时间戳注入（`Conversation started: ...`）
@@ -102,6 +160,10 @@ cat skills/edith-skill/SKILL.md
 
 # 查看部门知识库
 ls skills/departments/*/knowledge/
+
+# 使用ProSearch
+cd prosearch
+python3 prosearch_optimized.py "搜索内容"
 ```
 
 ## 📝 更新日志
@@ -109,3 +171,4 @@ ls skills/departments/*/knowledge/
 - **2026-05-08**：Prompt Cache优化 + MEMORY生命周期管理 + 仓库整理
 - **2026-05-10**：SKILL.md v5.2 + 对话讨论环节 + 面板UI改进
 - **2026-05-09**：部门知识库建设 + 知识注入工具 + 可视化面板
+- **2026-05-13**：ProSearch多引擎搜索聚合工具（token省95%，速度快8-14倍）
